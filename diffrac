@@ -1,0 +1,121 @@
+
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.stats import linregress
+
+arxiu=np.loadtxt("3_diffrac.txt", delimiter=",", skiprows=1)
+
+#plot intensitat vs 2theta
+theta2 = arxiu[:,0]
+I = arxiu[:,1]
+plt.plot(theta2,I, linewidth=0.7, color="purple", label="Intensitat")
+plt.xlabel(r"Angle $2 \theta (\degree)$")
+plt.ylabel("Intensitat relativa")
+plt.legend(loc="upper left")
+plt.show()
+
+#processat senyal
+from scipy.signal import find_peaks
+
+peaks, _ = find_peaks(I,  height=30, prominence=10, wlen=20)
+print("I=",I[peaks])
+print(r"2theta=", theta2[peaks])
+
+for px, py in zip(theta2[peaks], I[peaks]):
+    plt.text(px, py + 8, f"({px:.2f}, {py:.2f})",
+             ha='center', va='bottom', fontsize=8, color='black')
+plt.ylim(-10, 330)
+plt.plot(theta2,I, linewidth=0.7, color="purple", label="Intensitat")
+plt.plot(theta2[peaks], I[peaks], "rx", label="Pics")
+plt.xlabel(r"Angle $2 \theta (\degree)$")
+plt.ylabel("Intensitat relativa")
+plt.legend(loc="upper left")
+plt.show()
+
+#conversio i calculs
+long= 1.5406
+theta = np.radians(theta2[peaks]/2) #a radians pel sinus
+d = long/(2*np.sin(theta))
+inv_d2 = 1/d**2
+
+print("d (Å):", np.round(d, 3))
+print("d^-2 (Å^-2):", np.round(inv_d2, 3))
+
+#index i cel·la
+index=[]
+
+for h in range(1,5):
+    for k in range(0,h+1):
+        for l in range (0,k+1):
+            index.append((h,k,l))
+            if len(index) == 30:
+                break
+        if len(index) == 30:
+            break
+    if len(index) == 30:
+        break
+#hem generat 30 index
+
+def F(hkl, lattice): #factor de forma (sense usar pistes)
+    h,k,l = hkl
+    if lattice == "SC":
+        return 1
+    elif lattice == "BCC":
+        return 1+(-1)**(h+k+l)
+    elif lattice == "FCC":
+        return 1+(-1)**(h+k)+(-1)**(h+l)+(-1)**(k+l)
+    elif lattice == "Diamant":
+        if (h+k+l) % 4 == 0: #evitar numeros complexes
+            return (1+(-1)**(h+k)+(-1)**(h+l)+(-1)**(k+l))*(1+(-1)**((h+k+l)/2))
+        else:
+            return None
+    else:
+        return None
+
+lattices = ["SC", "BCC", "FCC", "Diamant"]
+
+for lat in lattices:
+    obs = [hkl for hkl in index if F(hkl, lat) !=0]
+    G = [np.sqrt(h**2+k**2+l**2) for (h,k,l) in obs]
+    inv_d2_teo = [i**2 for i in G]
+    print(f"Pics observables per {lat}:")
+    print(obs[:len(inv_d2)])
+    print("1_d2_teo",inv_d2_teo[:len(inv_d2)])
+    print("1_d2_exp", inv_d2)
+    inv_d2_teo = inv_d2_teo[:len(inv_d2)] #comparem valors
+    
+    #regressió lineal 
+    slope, intercept, r_value, p_value, std_err = linregress(inv_d2_teo, inv_d2)
+    a = np.sqrt(1/slope) #paràmetre xarxa
+    sigma_a = std_err/(2*slope**(3/2)) #incertesa
+    if r_value**2>=0.9:  #ens diu quina xarxa s'ajusta millor i ens guarda els pics
+        print(f"La xarxa {lat} s'ajusta millor")
+        print(f"Paràmetre de xarxa= {a:.5f} ± {sigma_a:.5f}")
+        pics=obs[:len(inv_d2)]
+    x=np.linspace(0,max(inv_d2_teo))
+    y=slope*x +intercept
+    plt.plot(x,y,linestyle= "--")
+    plt.scatter(inv_d2_teo,inv_d2, label=f"{lat}, $R^2=${r_value**2:.3f}")
+  
+plt.xlabel(r"$h^2+k^2+l^2$")
+plt.ylabel(r"$1/d^2$")
+plt.legend()
+plt.show()
+
+#assignació xarxa i pics
+for (px, py), i in zip(zip(theta2[peaks], I[peaks]), pics):
+    plt.text(px, py + 8, f"{i}",
+             ha='center', va='bottom', fontsize=8, color='black')
+plt.ylim(-10, 330)
+plt.plot(theta2,I, linewidth=0.7, color="purple", label="Intensitat")
+plt.plot(theta2[peaks], I[peaks], "rx", label="Pics")
+plt.xlabel(r"Angle $2 \theta (\degree)$")
+plt.ylabel("Intensitat relativa")
+plt.legend(loc="upper left")
+plt.title(r"Estructura FCC amb $a=3,61089\pm0,00021$ ")
+plt.show()
+
+    
+
+
+    
