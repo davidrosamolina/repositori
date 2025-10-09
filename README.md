@@ -1,1 +1,1 @@
-S'ha d'emprar el codi amb el arxiu text 3_diffrac.txt
+S'ha d'emprar el codi amb l'arxiu text 3_diffrac.txt
