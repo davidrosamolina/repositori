@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 from scipy.integrate import solve_ivp
 
 # parameters 
-Omega_L = 30
+Omega_L = 20
 Omega_p = 1
 gamma_21 = 2
 gamma_31 = 2
